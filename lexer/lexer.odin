@@ -60,6 +60,9 @@ tokenize :: proc(src: string) -> [dynamic]Token {
 		case '"':
 			token := str(&lexer)
 			append(&lexer.tokens, token)
+		case 't', 'f':
+			token := boolean(&lexer)
+			append(&lexer.tokens, token)
 		case:
 			if is_digit(c) || peek(&lexer) == '-' {
 				token := number(&lexer)
@@ -98,6 +101,42 @@ consume_whitespace :: proc(lexer: ^Lexer) {
 	    peek(lexer) == '\r' {
 		advance(lexer)
 	}
+}
+
+boolean :: proc(lexer: ^Lexer) -> Token {
+	lexer.start = lexer.current - 1
+	token: Token
+	token.type = .BOOLEAN
+	first_char := lexer.src[lexer.start]
+	if first_char == 't' && peek(lexer) != 'r' {
+		error(lexer, "Invalid boolean")
+	}
+
+	if first_char == 'f' && peek(lexer) != 'a' {
+		error(lexer, "Invalid boolean")
+	}
+
+	bool_true: string = "rue"
+	bool_false: string = "alse"
+	for !is_at_end(lexer) {
+		if first_char == 't' {
+			for c in bool_true {
+				if peek(lexer) != u8(c) {
+					error(
+						lexer,
+						"Invalid bool: expected true, got: %s",
+						lexer.src[lexer.start:lexer.current + len(bool_true)],
+					)
+				}
+			}
+		}
+
+		if first_char == 'f' {
+
+		}
+	}
+
+	return token
 }
 
 str :: proc(lexer: ^Lexer) -> Token {
@@ -140,7 +179,7 @@ is_at_end :: proc(lexer: ^Lexer) -> bool {
 	return lexer.current >= len(lexer.src) - 1
 }
 
-error :: proc(lexer: ^Lexer, message: string) {
-	log.errorf("Error on line %d: %s\n", lexer.line, message)
+error :: proc(lexer: ^Lexer, message: string, args: ..any) {
+	log.errorf(message, args)
 	os.exit(1)
 }
