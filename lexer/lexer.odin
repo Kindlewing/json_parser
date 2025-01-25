@@ -1,6 +1,7 @@
 package lexer
 
 import "core:fmt"
+import "core:log"
 import "core:os"
 
 TokenType :: enum int {
@@ -128,7 +129,6 @@ number :: proc(lexer: ^Lexer) -> Token {
 		advance(lexer)
 	}
 	token.value = lexer.src[lexer.start:lexer.current]
-
 	return token
 }
 
@@ -141,6 +141,6 @@ is_at_end :: proc(lexer: ^Lexer) -> bool {
 }
 
 error :: proc(lexer: ^Lexer, message: string) {
-	fmt.eprintf("Error on line %d: %s\n", lexer.line, message)
+	log.errorf("Error on line %d: %s\n", lexer.line, message)
 	os.exit(1)
 }
