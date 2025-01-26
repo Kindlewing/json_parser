@@ -64,7 +64,7 @@ tokenize :: proc(src: string) -> [dynamic]Token {
 			token := boolean(&lexer)
 			append(&lexer.tokens, token)
 		case:
-			if is_digit(c) || peek(&lexer) == '-' {
+			if is_digit(c) || c == '-' {
 				token := number(&lexer)
 				append(&lexer.tokens, token)
 			}
@@ -149,6 +149,14 @@ str :: proc(lexer: ^Lexer) -> Token {
 number :: proc(lexer: ^Lexer) -> Token {
 	token: Token
 	lexer.start = lexer.current - 1
+	if lexer.src[lexer.start] == '-' {
+		advance(lexer)
+	}
+
+	if lexer.src[lexer.start] == '-' && peek(lexer) == '.' {
+		log.error("Leading '.' is not allowed")
+		os.exit(1)
+	}
 	if lexer.src[lexer.start] == '0' && peek(lexer) != '.' {
 		log.error("Leading 0's are not allowed")
 		os.exit(1)
