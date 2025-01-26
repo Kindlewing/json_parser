@@ -84,7 +84,7 @@ advance :: proc(lexer: ^Lexer) -> u8 {
 
 peek :: proc(lexer: ^Lexer) -> u8 {
 	if is_at_end(lexer) {
-		fmt.eprintf("Unable to peek. EOF")
+		log.error("Unable to peek. EOF")
 		os.exit(1)
 	}
 	return lexer.src[lexer.current]
@@ -122,7 +122,12 @@ boolean :: proc(lexer: ^Lexer) -> Token {
 	}
 
 	if actual_val != expected_val {
-		error(lexer, "Error: invalid boolean: expected %s, got %s\n")
+		log.errorf(
+			"Invalid boolean. Got %s, expected %s\n",
+			actual_val,
+			expected_val,
+		)
+		os.exit(1)
 	}
 	token.value = actual_val
 	return token
@@ -145,7 +150,8 @@ number :: proc(lexer: ^Lexer) -> Token {
 	token: Token
 	lexer.start = lexer.current - 1
 	if lexer.src[lexer.start] == '0' && peek(lexer) != '.' {
-		error(lexer, "Leading 0's are not allowed")
+		log.error("Leading 0's are not allowed")
+		os.exit(1)
 	}
 	if peek(lexer) == '.' {
 		token.type = .FLOAT
@@ -166,9 +172,4 @@ is_digit :: proc(c: u8) -> bool {
 
 is_at_end :: proc(lexer: ^Lexer) -> bool {
 	return lexer.current >= len(lexer.src) - 1
-}
-
-error :: proc(lexer: ^Lexer, message: string, args: ..any) {
-	log.errorf(message, args)
-	os.exit(1)
 }
