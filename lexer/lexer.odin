@@ -175,6 +175,7 @@ number :: proc(lexer: ^Lexer) -> Token {
 		advance(lexer)
 	}
 
+	// After decimal
 	for is_digit(peek(lexer)) && !is_at_end(lexer) {
 		advance(lexer)
 	}
