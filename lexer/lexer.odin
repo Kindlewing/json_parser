@@ -84,7 +84,7 @@ advance :: proc(lexer: ^Lexer) -> u8 {
 
 peek :: proc(lexer: ^Lexer) -> u8 {
 	if is_at_end(lexer) {
-		log.error("Unable to peek. EOF")
+		fmt.eprintf("Unable to peek. EOF")
 		os.exit(1)
 	}
 	return lexer.src[lexer.current]
@@ -122,8 +122,9 @@ boolean :: proc(lexer: ^Lexer) -> Token {
 	}
 
 	if actual_val != expected_val {
-		log.errorf(
-			"Invalid boolean. Got %s, expected %s\n",
+		fmt.eprintf(
+			"[line: %d] Invalid boolean. Got %s, expected %s\n",
+			lexer.line,
 			actual_val,
 			expected_val,
 		)
@@ -148,25 +149,32 @@ str :: proc(lexer: ^Lexer) -> Token {
 
 number :: proc(lexer: ^Lexer) -> Token {
 	token: Token
+	token.type = .INTEGER
 	lexer.start = lexer.current - 1
+
+	if lexer.src[lexer.start] == '-' && peek(lexer) == '.' {
+		fmt.eprintf("[line: %d] Leading '.' is not allowed\n", lexer.line)
+		os.exit(1)
+	}
+	if lexer.src[lexer.start] == '0' && peek(lexer) != '.' {
+		fmt.eprintf("[line: %d] Leading 0's are not allowed\n", lexer.line)
+		os.exit(1)
+	}
+
 	if lexer.src[lexer.start] == '-' {
 		advance(lexer)
 	}
 
-	if lexer.src[lexer.start] == '-' && peek(lexer) == '.' {
-		log.error("Leading '.' is not allowed")
-		os.exit(1)
+	// Before decimal
+	for is_digit(peek(lexer)) && !is_at_end(lexer) {
+		advance(lexer)
 	}
-	if lexer.src[lexer.start] == '0' && peek(lexer) != '.' {
-		log.error("Leading 0's are not allowed")
-		os.exit(1)
-	}
+
 	if peek(lexer) == '.' {
 		token.type = .FLOAT
 		advance(lexer)
-	} else {
-		token.type = .INTEGER
 	}
+
 	for is_digit(peek(lexer)) && !is_at_end(lexer) {
 		advance(lexer)
 	}
