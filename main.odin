@@ -1,8 +1,8 @@
 package main
 
+import "core:fmt"
 import "core:log"
 import "core:os"
-import "lexer"
 
 main :: proc() {
 	context.logger = log.create_console_logger()
@@ -19,7 +19,8 @@ main :: proc() {
 	}
 
 	src := string(bytes)
-	lexer.tokenize(src)
+	json := parse(src)
+	fmt.printf("%v\n", json)
 
 	log.destroy_console_logger(context.logger)
 }

@@ -1,26 +1,8 @@
-package lexer
-
+package main
 import "core:fmt"
 import "core:log"
 import "core:os"
 
-TokenType :: enum int {
-	OPEN_BRACKET,
-	CLOSE_BRACKET,
-	OPEN_CURLY,
-	CLOSE_CURLY,
-	COLON,
-	COMMA,
-	STRING,
-	INTEGER,
-	FLOAT,
-	BOOLEAN,
-}
-
-Token :: struct {
-	type:  TokenType,
-	value: string,
-}
 
 Lexer :: struct {
 	src:     string,
@@ -44,6 +26,7 @@ tokenize :: proc(src: string) -> [dynamic]Token {
 			consume_whitespace(&lexer)
 		case '\n':
 			lexer.line += 1
+			append(&lexer.tokens, Token{type = .NEWLINE})
 			consume_whitespace(&lexer)
 		case '{':
 			append(&lexer.tokens, Token{type = .OPEN_CURLY})
@@ -69,9 +52,6 @@ tokenize :: proc(src: string) -> [dynamic]Token {
 				append(&lexer.tokens, token)
 			}
 		}
-	}
-	for i in 0 ..< len(lexer.tokens) {
-		fmt.printf("Token: %v\n", lexer.tokens[i])
 	}
 	return lexer.tokens
 }
@@ -157,6 +137,12 @@ number :: proc(lexer: ^Lexer) -> Token {
 		os.exit(1)
 	}
 	if lexer.src[lexer.start] == '0' && peek(lexer) != '.' {
+		fmt.eprintf("[line: %d] Leading 0's are not allowed\n", lexer.line)
+		os.exit(1)
+	}
+	if lexer.src[lexer.start] == '-' &&
+	   peek(lexer) == '0' &&
+	   peek_next(lexer) != '.' {
 		fmt.eprintf("[line: %d] Leading 0's are not allowed\n", lexer.line)
 		os.exit(1)
 	}
