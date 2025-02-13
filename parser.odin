@@ -99,7 +99,6 @@ parse_array :: proc(p: ^Parser) -> [dynamic]Value {
 
 parse_value :: proc(p: ^Parser, t: Token) -> Value {
 	value: Value
-	fmt.printf("Parsing token: %v\n", t)
 
 	#partial switch t.type {
 	case .OPEN_CURLY:
