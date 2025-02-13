@@ -6,7 +6,7 @@ import "core:os"
 
 main :: proc() {
 	context.logger = log.create_console_logger()
-	fd, open_err := os.open("examples/00.json", os.O_RDONLY)
+	fd, open_err := os.open("examples/01.json", os.O_RDONLY)
 	if open_err != nil {
 		log.fatalf("There was an error opening the file: %v\n", open_err)
 		os.exit(1)
@@ -20,7 +20,7 @@ main :: proc() {
 
 	src := string(bytes)
 	json := parse(src)
-	fmt.printf("%v\n", json)
+	fmt.println(json["quiz"]["sport"])
 
 	log.destroy_console_logger(context.logger)
 }

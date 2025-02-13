@@ -1,7 +1,8 @@
 {
 	"test": true,
-	"val_array": [0.35827, 0.4812],
+	"val_array": [-0.156, 0.25],
+	"otherTest": { "more": 3 },
 	"test48": false,
-	"val": 0.35336827,
+	"val": 0.145,
 	"val2": -70.3583
 }

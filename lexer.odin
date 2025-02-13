@@ -53,6 +53,7 @@ tokenize :: proc(src: string) -> [dynamic]Token {
 			}
 		}
 	}
+	append(&lexer.tokens, Token{type = .EOF})
 	return lexer.tokens
 }
 

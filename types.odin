@@ -12,6 +12,7 @@ TokenType :: enum int {
 	FLOAT,
 	BOOLEAN,
 	NEWLINE,
+	EOF,
 }
 
 Token :: struct {

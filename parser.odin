@@ -7,6 +7,7 @@ import "core:strconv"
 
 Value :: union {
 	int,
+	string,
 	f64,
 	bool,
 	[dynamic]Value,
@@ -32,72 +33,73 @@ parse :: proc(src: string) -> map[string]Value {
 
 parse_map :: proc(p: ^Parser) -> map[string]Value {
 	m: map[string]Value
-	if peek_t(p).type != .OPEN_CURLY {
-		fmt.eprintf(
-			"Invalid start of map: expected {, got %v\n",
-			peek_t(p).type,
-		)
+	if p.current == 0 && peek_t(p).type != .OPEN_CURLY {
+		fmt.eprintf("Invalid start of map. Expected {, got %v\n", peek_t(p))
 		os.exit(1)
 	}
-
-	for peek_t(p).type != .CLOSE_CURLY {
-		// expecting value here
-		t := advance_t(p)
-		key: string
-		value: Value
-
+	// Move past {
+	advance_t(p)
+	for {
+		t := peek_t(p)
 		#partial switch t.type {
+		case .CLOSE_CURLY:
+			advance_t(p)
+			return m
 		case .NEWLINE:
 			p.line += 1
+			advance_t(p)
+			continue
+		case .COMMA:
+			advance_t(p)
 			continue
 		case .STRING:
-			key = t.value
-			next_token := advance_t(p)
+			key := t.value
+			advance_t(p)
+
+			next_token := peek_t(p)
 			if next_token.type != .COLON {
-				fmt.eprintf("[error: %d] Expected  ':'\n", p.line)
+				fmt.eprintf(
+					"[error: %d] Expected ':', got %v\n",
+					p.line,
+					next_token,
+				)
 				os.exit(1)
 			}
-			value = parse_value(p)
-		case:
-			continue
-		}
+			// Move past colon
+			advance_t(p)
 
-		if value != nil {
+			tok := peek_t(p)
+			value := parse_value(p, tok)
 			m[key] = value
+		case:
+			fmt.eprintf("[error: %d] Unexpected token: %v\n", p.line, t)
+			os.exit(1)
 		}
 	}
+
 	return m
 }
 
 parse_array :: proc(p: ^Parser) -> [dynamic]Value {
 	ret: [dynamic]Value
-	for {
-		t := advance_t(p)
-		if t.type == .OPEN_BRACKET {
-			continue
-		}
-		if t.type == .COMMA {
-			continue
-		}
-
-		if t.type == .CLOSE_BRACKET {
-			break
-		}
-		fmt.printf("About to parse float: %s\n", t.value)
-		value := parse_value(p)
-		if value != nil {
-			append(&ret, value)
+	for peek_t(p).type != .CLOSE_BRACKET {
+		t := peek_t(p)
+		#partial switch t.type {
+		case .INTEGER, .FLOAT, .BOOLEAN, .STRING:
+			val := parse_value(p, t)
+			append(&ret, val)
+		case:
+			advance_t(p)
 		}
 	}
-	// go past closing ]
+	// advance past ]
 	advance_t(p)
-
 	return ret
 }
 
-parse_value :: proc(p: ^Parser) -> Value {
-	t := peek_t(p)
+parse_value :: proc(p: ^Parser, t: Token) -> Value {
 	value: Value
+	fmt.printf("Parsing token: %v\n", t)
 
 	#partial switch t.type {
 	case .OPEN_CURLY:
@@ -111,12 +113,17 @@ parse_value :: proc(p: ^Parser) -> Value {
 			os.exit(1)
 		}
 		value = b
-		p.current += 1
+		advance_t(p)
+	case .STRING:
+		value = t.value
+		advance_t(p)
 	case .FLOAT:
-		value = parse_float(p)
+		value = strconv.atof(t.value)
+		advance_t(p)
 	case .INTEGER:
 		i := strconv.atoi(t.value)
 		value = i
+		advance_t(p)
 	}
 	return value
 }
@@ -135,35 +142,6 @@ parse_num :: proc(val: string, current: ^int) -> f64 {
 		}
 	}
 	current^ = i^
-	return res
-}
-
-parse_float :: proc(p: ^Parser) -> f64 {
-	val := p.tokens[p.current].value
-	res: f64
-	i: int
-	sign := 1.0
-	if val[0] == '-' {
-		sign = -1.0
-		i += 1
-	}
-
-	n: f64 = parse_num(val, &i)
-	if (i <= len(p.tokens)) && val[i] == '.' {
-		i += 1
-		c: f64 = 1.0 / 10.0
-		for i < len(val) {
-			char: u8 = val[i] - cast(u8)'0'
-			if char < 10 {
-				n = n + c * cast(f64)char
-				c *= 1.0 / 10.0
-				i += 1
-			} else {
-				break
-			}
-		}
-	}
-	res = sign * n
 	return res
 }
 
