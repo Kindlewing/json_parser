@@ -34,7 +34,7 @@ parse :: proc(src: string) -> map[string]Value {
 parse_map :: proc(p: ^Parser) -> map[string]Value {
 	m: map[string]Value
 	if p.current == 0 && peek_t(p).type != .OPEN_CURLY {
-		fmt.eprintf("Invalid start of map. Expected {, got %v\n", peek_t(p))
+		fmt.eprintf("Invalid start of map. Expected {{, got %v\n", peek_t(p))
 		os.exit(1)
 	}
 	// Move past {

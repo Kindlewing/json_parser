@@ -64,10 +64,6 @@ advance :: proc(lexer: ^Lexer) -> u8 {
 }
 
 peek :: proc(lexer: ^Lexer) -> u8 {
-	if is_at_end(lexer) {
-		fmt.eprintf("Unable to peek. EOF")
-		os.exit(1)
-	}
 	return lexer.src[lexer.current]
 }
 
