@@ -5,10 +5,20 @@ import "core:log"
 import "core:math/rand"
 import "core:os"
 import "core:strings"
-import "core:time"
 
-generate_input :: proc(f_path: string, count: int) {
-	fd, err := os.open(f_path, os.O_CREATE | os.O_RDWR)
+generate_input :: proc(
+	f_path: string,
+	count: int,
+	remove_current: bool = true,
+) {
+	if remove_current {
+		err := os.remove(f_path)
+		if err != nil {
+			fmt.eprintf("Could not open file: %s\n", err)
+			os.exit(-1)
+		}
+	}
+	fd, err := os.open(f_path, os.O_CREATE | os.O_RDWR, 0o755)
 	if err != nil {
 		fmt.eprintf("Could not open file: %s\n", err)
 		os.exit(-1)
@@ -38,7 +48,7 @@ generate_input :: proc(f_path: string, count: int) {
 main :: proc() {
 	context.logger = log.create_console_logger()
 	when ODIN_DEBUG {
-		generate_input("examples/haversine.json", 10)
+		generate_input("examples/haversine.json", 100_000)
 		os.exit(1)
 	}
 	fd, open_err := os.open("examples/haversine.json", os.O_RDONLY)
@@ -54,14 +64,7 @@ main :: proc() {
 	}
 
 	src := string(bytes)
-
-	start := time.now()
-	json := parse(src)
-	fmt.printf(
-		"Time to parse: %fms\n",
-		time.duration_milliseconds(time.since(start)),
-	)
-
+	time(src, 10)
 
 	log.destroy_console_logger(context.logger)
 }
