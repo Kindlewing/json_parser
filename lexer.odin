@@ -22,9 +22,9 @@ tokenize :: proc(src: string) -> [dynamic]Token {
 	for !is_at_end(&lexer) {
 		c: u8 = advance(&lexer)
 		switch c {
-		case ' ', '\t', '\r':
+		case ' ', '\t':
 			consume_whitespace(&lexer)
-		case '\n':
+		case '\n', '\r':
 			lexer.line += 1
 			append(&lexer.tokens, Token{type = .NEWLINE})
 			consume_whitespace(&lexer)
@@ -58,16 +58,25 @@ tokenize :: proc(src: string) -> [dynamic]Token {
 }
 
 advance :: proc(lexer: ^Lexer) -> u8 {
+	if lexer.current >= len(lexer.src) {
+		return 0
+	}
 	c := lexer.src[lexer.current]
 	lexer.current += 1
 	return c
 }
 
 peek :: proc(lexer: ^Lexer) -> u8 {
+	if lexer.current >= len(lexer.src) {
+		return 0
+	}
 	return lexer.src[lexer.current]
 }
 
 peek_next :: proc(lexer: ^Lexer) -> u8 {
+	if lexer.current >= len(lexer.src) {
+		return 0
+	}
 	return lexer.src[lexer.current + 1]
 }
 
@@ -171,5 +180,5 @@ is_digit :: proc(c: u8) -> bool {
 }
 
 is_at_end :: proc(lexer: ^Lexer) -> bool {
-	return lexer.current >= len(lexer.src) - 1
+	return lexer.current >= len(lexer.src)
 }

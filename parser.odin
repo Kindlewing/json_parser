@@ -22,6 +22,7 @@ Parser :: struct {
 
 parse :: proc(src: string) -> map[string]Value {
 	tokens := tokenize(src)
+	defer delete(tokens)
 	p: Parser = {
 		line    = 0,
 		current = 0,
@@ -76,7 +77,6 @@ parse_map :: proc(p: ^Parser) -> map[string]Value {
 			os.exit(1)
 		}
 	}
-
 	return m
 }
 
@@ -85,7 +85,7 @@ parse_array :: proc(p: ^Parser) -> [dynamic]Value {
 	for peek_t(p).type != .CLOSE_BRACKET {
 		t := peek_t(p)
 		#partial switch t.type {
-		case .INTEGER, .FLOAT, .BOOLEAN, .STRING:
+		case .INTEGER, .FLOAT, .BOOLEAN, .STRING, .OPEN_CURLY:
 			val := parse_value(p, t)
 			append(&ret, val)
 		case:
