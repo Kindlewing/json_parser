@@ -21,7 +21,8 @@ Parser :: struct {
 }
 
 parse :: proc(src: string) -> map[string]Value {
-	time_function()
+	prof := time_function()
+	defer destroy_profile_block(&prof)
 	tokens := tokenize(src)
 	defer delete(tokens)
 	p: Parser = {
@@ -99,6 +100,8 @@ parse_array :: proc(p: ^Parser) -> [dynamic]Value {
 }
 
 parse_value :: proc(p: ^Parser, t: Token) -> Value {
+	prof: profile_block = time_function()
+	defer destroy_profile_block(&prof)
 	value: Value
 
 	#partial switch t.type {

@@ -46,6 +46,23 @@ generate_input :: proc(f_path: string, count: int, should_rm: bool) {
 	os.write_string(fd, "}")
 }
 
+read_file :: proc(path: string) -> []byte {
+	prof := time_function()
+	defer destroy_profile_block(&prof)
+	fd, open_err := os.open(path, os.O_RDONLY)
+	if open_err != nil {
+		log.fatalf("There was an error opening the file: %v\n", open_err)
+		os.exit(1)
+	}
+	bytes, ok := os.read_entire_file_from_handle(fd)
+	if !ok {
+		log.fatalf("There was an error reading the file")
+		os.exit(1)
+	}
+	defer os.close(fd)
+	return bytes
+}
+
 radians_from_deg :: proc(deg: f64) -> f64 {
 	return deg * (m.PI / 180)
 }
@@ -54,20 +71,35 @@ sqr :: proc(n: f64) -> f64 {
 	return n * n
 }
 
-haversine :: proc(x0, x1, y0, y1: f64, radius: f64) -> f64 {
-	lat1 := radians_from_deg(x0)
-	lat2 := radians_from_deg(x1)
-	lon1 := radians_from_deg(y0)
-	lon2 := radians_from_deg(y1)
+sum_haversine :: proc(pairs: [dynamic]Value, count: ^int) -> f64 {
+	prof := time_function()
+	defer destroy_profile_block(&prof)
+	res: f64
+	radius: f64 = 6371.8
+	prof_loop := time_block("Haversine sum loop")
+	defer destroy_profile_block(&prof_loop)
+	for i in 0 ..< len(pairs) {
+		lat1 := pairs[i].(map[string]Value)["x0"].(f64)
+		lat2 := pairs[i].(map[string]Value)["x1"].(f64)
+		lon1 := pairs[i].(map[string]Value)["y0"].(f64)
+		lon2 := pairs[i].(map[string]Value)["y1"].(f64)
 
-	d_lat: f64 = radians_from_deg(lat2 - lat1)
-	d_lon: f64 = radians_from_deg(lon2 - lon1)
+		lat1 = radians_from_deg(lat1)
+		lat2 = radians_from_deg(lat2)
+		lon1 = radians_from_deg(lon1)
+		lon2 = radians_from_deg(lon2)
 
-	a: f64 =
-		sqr(m.sin(d_lon / 2)) +
-		m.cos(lon1) * m.cos(lon2) * (sqr(m.sin(d_lat / 2)))
-	c: f64 = 2 * m.asin(m.sqrt(a))
-	return radius * c
+		d_lat: f64 = radians_from_deg(lat2 - lat1)
+		d_lon: f64 = radians_from_deg(lon2 - lon1)
+
+		a: f64 =
+			sqr(m.sin(d_lon / 2)) +
+			m.cos(lon1) * m.cos(lon2) * (sqr(m.sin(d_lat / 2)))
+		c: f64 = 2 * m.asin(m.sqrt(a))
+		count^ += 1
+		res += radius * c
+	}
+	return res
 }
 main :: proc() {
 	start_profile()
@@ -98,41 +130,19 @@ main :: proc() {
 		os.exit(1)
 	}
 
-	fmt.printf("About to read file\n")
-	fd, open_err := os.open("example/haversine.json", os.O_RDONLY)
-	if open_err != nil {
-		log.fatalf("There was an error opening the file: %v\n", open_err)
-		os.exit(1)
-	}
-	bytes, ok := os.read_entire_file_from_handle(fd)
-	if !ok {
-		log.fatalf("There was an error reading the file")
-		os.exit(1)
-	}
-
-	defer os.close(fd)
-	defer delete_slice(bytes)
-
+	bytes := read_file("examples/haversine.json")
+	defer delete(bytes)
 	src := string(bytes)
 	json := parse(src)
 
 	pairs := json["pairs"].([dynamic]Value)
-	result: f64 = 0.0
 	count: int
 
+	result: f64 = sum_haversine(pairs, &count)
 
-	for i in 0 ..< len(pairs) {
-		lat1 := pairs[i].(map[string]Value)["x0"].(f64)
-		lat2 := pairs[i].(map[string]Value)["x1"].(f64)
-		lon1 := pairs[i].(map[string]Value)["y0"].(f64)
-		lon2 := pairs[i].(map[string]Value)["y1"].(f64)
-		res := haversine(lat1, lat2, lon1, lon2, 6371.8)
-		result += res
-		count += 1
-	}
-	avg: f64 = result / cast(f64)count
-
-	fmt.printf("average haversine: %f\n", avg)
+	fmt.printf("haversine sum: %f\n", result)
+	fmt.printf("pair count: %d\n", len(pairs))
+	end_and_print_profile()
 
 	log.destroy_console_logger(context.logger)
 	for i in 0 ..< len(pairs) {
