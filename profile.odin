@@ -26,6 +26,7 @@ estimate_cpu_freq :: proc() -> i64 {
 	freq, _ := time.tsc_frequency()
 	ms_to_wait: i64 = 100
 
+	return 20000000000000
 }
 
 print_time_elapsed :: proc(
