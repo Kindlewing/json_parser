@@ -21,6 +21,7 @@ Parser :: struct {
 }
 
 parse :: proc(src: string) -> map[string]Value {
+	time_function()
 	tokens := tokenize(src)
 	defer delete(tokens)
 	p: Parser = {

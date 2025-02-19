@@ -46,21 +46,6 @@ generate_input :: proc(f_path: string, count: int, should_rm: bool) {
 	os.write_string(fd, "}")
 }
 
-read_file :: proc(f_path: string) -> []byte {
-	fd, open_err := os.open(f_path, os.O_RDONLY)
-	if open_err != nil {
-		log.fatalf("There was an error opening the file: %v\n", open_err)
-		os.exit(1)
-	}
-	bytes, ok := os.read_entire_file_from_handle(fd)
-	if !ok {
-		log.fatalf("There was an error reading the file")
-		os.exit(1)
-	}
-	defer os.close(fd)
-	return bytes
-}
-
 radians_from_deg :: proc(deg: f64) -> f64 {
 	return deg * (m.PI / 180)
 }
@@ -85,6 +70,7 @@ haversine :: proc(x0, x1, y0, y1: f64, radius: f64) -> f64 {
 	return radius * c
 }
 main :: proc() {
+	start_profile()
 	track: mem.Tracking_Allocator
 	mem.tracking_allocator_init(&track, context.allocator)
 	context.allocator = mem.tracking_allocator(&track)
@@ -112,23 +98,28 @@ main :: proc() {
 		os.exit(1)
 	}
 
+	fmt.printf("About to read file\n")
+	fd, open_err := os.open("example/haversine.json", os.O_RDONLY)
+	if open_err != nil {
+		log.fatalf("There was an error opening the file: %v\n", open_err)
+		os.exit(1)
+	}
+	bytes, ok := os.read_entire_file_from_handle(fd)
+	if !ok {
+		log.fatalf("There was an error reading the file")
+		os.exit(1)
+	}
 
-	read_time_start := time.tick_now()
-
-	read_time_end := time.tick_since(read_time_start)
-	bytes := read_file("example/haversine.json")
+	defer os.close(fd)
 	defer delete_slice(bytes)
-	src := string(bytes)
 
-	parse_time_start := time.tick_now()
+	src := string(bytes)
 	json := parse(src)
-	parse_time_end := time.tick_since(parse_time_start)
 
 	pairs := json["pairs"].([dynamic]Value)
 	result: f64 = 0.0
 	count: int
 
-	calc_time_start := time.tick_now()
 
 	for i in 0 ..< len(pairs) {
 		lat1 := pairs[i].(map[string]Value)["x0"].(f64)
@@ -140,17 +131,8 @@ main :: proc() {
 		count += 1
 	}
 	avg: f64 = result / cast(f64)count
-	calc_time_end := time.tick_since(calc_time_start)
 
 	fmt.printf("average haversine: %f\n", avg)
-	fmt.printf("time to read file: %f\n", read_time_end)
-	fmt.printf("time to parse file: %f\n", parse_time_end)
-	fmt.printf("time to perform calculation: %f\n", calc_time_end)
-	fmt.printf(
-		"total time: %f\n",
-		read_time_end + parse_time_end + calc_time_end,
-	)
-
 
 	log.destroy_console_logger(context.logger)
 	for i in 0 ..< len(pairs) {
