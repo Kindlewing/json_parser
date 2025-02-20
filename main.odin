@@ -10,6 +10,7 @@ import "core:strings"
 import "core:time"
 
 GEN :: #config(GEN, false)
+PROFILE :: #config(PROFILE, false)
 N :: #config(N, 1_000)
 
 generate_input :: proc(f_path: string, count: int, should_rm: bool) {
@@ -47,12 +48,15 @@ generate_input :: proc(f_path: string, count: int, should_rm: bool) {
 }
 
 read_file :: proc(path: string) -> []byte {
-	prof := time_function()
-	defer destroy_profile_block(&prof)
 	fd, open_err := os.open(path, os.O_RDONLY)
 	if open_err != nil {
 		log.fatalf("There was an error opening the file: %v\n", open_err)
 		os.exit(1)
+	}
+	f_size, _ := os.file_size(fd)
+	when PROFILE {
+		prof := time_bandwidth("read_file", u64(f_size))
+		defer destroy_profile_block(&prof)
 	}
 	bytes, ok := os.read_entire_file_from_handle(fd)
 	if !ok {
@@ -71,13 +75,25 @@ sqr :: proc(n: f64) -> f64 {
 	return n * n
 }
 
-sum_haversine :: proc(pairs: [dynamic]Value, count: ^int) -> f64 {
-	prof := time_function()
-	defer destroy_profile_block(&prof)
+sum_haversine :: proc(
+	pairs: [dynamic]Value,
+	count: ^int,
+	loc := #caller_location,
+) -> f64 {
+	when PROFILE {
+		fmt.println(size_of(pairs))
+		fmt.println(len(pairs))
+		fmt.println(size_of(pairs) * u64(len(pairs)))
+
+		prof := time_bandwidth(
+			"sum_haversine",
+			size_of(pairs) * u64(len(pairs)),
+		)
+		defer destroy_profile_block(&prof)
+	}
 	res: f64
 	radius: f64 = 6371.8
-	prof_loop := time_block("Haversine sum loop")
-	defer destroy_profile_block(&prof_loop)
+
 	for i in 0 ..< len(pairs) {
 		lat1 := pairs[i].(map[string]Value)["x0"].(f64)
 		lat2 := pairs[i].(map[string]Value)["x1"].(f64)
@@ -142,12 +158,19 @@ main :: proc() {
 
 	fmt.printf("haversine sum: %f\n", result)
 	fmt.printf("pair count: %d\n", len(pairs))
-	end_and_print_profile()
+
 
 	log.destroy_console_logger(context.logger)
-	for i in 0 ..< len(pairs) {
-		delete(pairs[i].(map[string]Value))
+	{
+		when PROFILE {
+			prof := time_block("Free json")
+			defer destroy_profile_block(&prof)
+		}
+		for i in 0 ..< len(pairs) {
+			delete(pairs[i].(map[string]Value))
+		}
+		delete_dynamic_array(pairs)
+		delete_map(json)
 	}
-	delete_dynamic_array(pairs)
-	delete_map(json)
+	end_and_print_profile()
 }
