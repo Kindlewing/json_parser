@@ -16,8 +16,8 @@ global_prof_parent: u64 = 0
 
 
 profile_anchor :: struct {
-	tsc_elapsed_exclusive: u64,
-	tsc_elapsed_inclusive: u64,
+	tsc_elapsed_exclusive: u64, // without children
+	tsc_elapsed_inclusive: u64, // with children
 	bytes_processed:       u64,
 	hit_count:             u64,
 	label:                 string,
